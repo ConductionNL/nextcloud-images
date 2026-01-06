@@ -1,17 +1,16 @@
-# Best-practice: Bitnami-compatible Postgres image with extensions
-# - Keeps Bitnami entrypoint + filesystem layout intact
-# - Installs extensions as root during build
+# Bitnami-compatible Postgres image with extensions
+# - Keeps Bitnami entrypoint and /bitnami filesystem layout
+# - Installs packages as root during build
 # - Runs as non-root (1001) at runtime
 
 ARG PG_MAJOR=16
 FROM bitnamilegacy/postgresql:${PG_MAJOR}
 
-# Switch to root only for package installation
+# Docker ARG scope best practice: re-declare after FROM
+ARG PG_MAJOR=16
+
 USER root
 
-# Install required extension packages
-# - postgresql-contrib provides: pg_trgm, uuid-ossp, btree_gin, btree_gist, etc.
-# - postgresql-${PG_MAJOR}-pgvector provides: vector extension
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -28,5 +27,4 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-# Back to Bitnami non-root runtime user
 USER 1001

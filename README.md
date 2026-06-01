@@ -12,14 +12,30 @@ These images are temporary solutions until we can use an official Nextcloud imag
 
 ## Building & publishing
 
-Images are built by CI on [Codeberg](https://codeberg.org/Conduction/nextcloud-images)
-via Forgejo Actions (`.forgejo/workflows/build.yml`) and pushed to Docker Hub.
-Codeberg's runners have no Docker daemon, so builds use `buildah`. Pushing
-requires the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
+**Supported path today: build locally and push.** Codeberg's *hosted* CI
+runners OOM while building these images (the nextcloud-fpm base is too large
+for the `vfs` storage driver under their RAM limit), so use the helper script:
 
-To build locally with Docker:
+```bash
+# log in once (paste a Docker Hub access token as the password), then:
+docker login -u conduction2022 docker.io
+./build-and-push.sh                 # both images
+./build-and-push.sh soap            # only the soap-client image
+./build-and-push.sh postgres        # only the postgres-extensions image
+```
+
+Credentials are read from `docker login` (or `DOCKERHUB_USERNAME` /
+`DOCKERHUB_TOKEN` env vars) — never store the token in a `.env` or commit it.
+
+Or build the images by hand:
 
 ```bash
 docker build ./soap-client          -t docker.io/conduction2022/nextcloud-images:fpm-soap
 docker build ./postgres-extensions  -t docker.io/conduction2022/nextcloud-images:postgres16-ext
 ```
+
+**CI (`.forgejo/workflows/build.yml`)** builds with `buildah` (Codeberg runners
+have no Docker daemon) and pushes to Docker Hub using the `DOCKERHUB_USERNAME`
+and `DOCKERHUB_TOKEN` repository secrets. It currently fails on Codeberg's
+hosted runners due to the RAM/storage limits above; it is intended for a
+**self-hosted Forgejo runner**, which has no such limits.

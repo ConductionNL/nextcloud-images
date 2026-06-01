@@ -16,6 +16,17 @@ All notable changes to this repository are documented here.
 ### Added
 - Repository mirrored/migrated to `https://codeberg.org/Conduction/nextcloud-images`.
 
+### Added (later same day)
+- `build-and-push.sh` — local build & push helper for both images. Reads
+  credentials from `docker login` or `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN`
+  env vars (never from a committed file).
+
+### Known issue
+- Codeberg's **hosted** runners OOM (`signal: killed`) while pulling/building the
+  nextcloud-fpm base under the `vfs` storage driver. Local build is the
+  supported path until a self-hosted Forgejo runner is available; the Forgejo
+  workflow stays in place for that runner.
+
 ### Notes
 - The legacy `.github/workflows/build.yml` still references ghcr.io and will fail
   on a flagged account; left in place pending a decision to remove it.

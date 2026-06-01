@@ -8,7 +8,7 @@
 # Contrib extensions (pg_trgm, uuid-ossp, btree_gin, btree_gist) are included in Bitnami.
 
 ARG PG_MAJOR=16
-FROM bitnamilegacy/postgresql:${PG_MAJOR}
+FROM docker.io/bitnamilegacy/postgresql:${PG_MAJOR}
 
 # Docker ARG scope best practice: re-declare after FROM
 ARG PG_MAJOR=16

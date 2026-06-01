@@ -1,0 +1,81 @@
+name: Build nextcloud images
+
+# Builds the two purpose-built images and pushes them to Docker Hub.
+#
+# Why buildah (and not `docker build`)?
+#   Codeberg's hosted runners are rootless Podman inside LXC -- there is no
+#   Docker daemon. buildah works there, provided two flags:
+#     --storage-driver=vfs   the default overlay driver needs FUSE (absent here)
+#     --isolation=chroot     avoids namespace ops requiring elevated privileges
+#
+# Required repository secrets (Settings -> Actions -> Secrets):
+#   DOCKERHUB_USERNAME   Docker Hub user/org with push rights on the namespace
+#   DOCKERHUB_TOKEN      Docker Hub access token (NOT the account password)
+#
+# Target namespace lives in env.REGISTRY below -- change it in one place.
+#
+# NOTE ON RESOURCE LIMITS: codeberg-medium = 4 CPU / 8GB RAM / 10 min, and RAM
+# counts filesystem writes (+2GB temp storage). The pgvector compile and the
+# nextcloud-fpm base are heavy; with the slow vfs driver these builds may hit
+# the time/storage ceiling. If so, switch `runs-on` to a self-hosted Forgejo
+# runner label (no such limits) once one is available.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io/conduction/nextcloud-images
+
+jobs:
+  build-soap-client:
+    runs-on: codeberg-medium
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Install buildah
+        run: apt-get update -qq && apt-get install -y --no-install-recommends buildah ca-certificates
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+
+      - name: Build SOAP client image
+        run: |
+          buildah build \
+            --storage-driver=vfs \
+            --isolation=chroot \
+            --tag "${REGISTRY}:fpm-soap" \
+            ./soap-client
+
+      - name: Push SOAP client image
+        run: |
+          buildah push --storage-driver=vfs "${REGISTRY}:fpm-soap"
+
+  build-postgres-extensions:
+    runs-on: codeberg-medium
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Install buildah
+        run: apt-get update -qq && apt-get install -y --no-install-recommends buildah ca-certificates
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
+
+      - name: Build Postgres extensions image
+        run: |
+          buildah build \
+            --storage-driver=vfs \
+            --isolation=chroot \
+            --tag "${REGISTRY}:postgres16-ext" \
+            --tag "${REGISTRY}:postgres16-ext-sha-${{ github.sha }}" \
+            ./postgres-extensions
+
+      - name: Push Postgres extensions image
+        run: |
+          buildah push --storage-driver=vfs "${REGISTRY}:postgres16-ext"
+          buildah push --storage-driver=vfs "${REGISTRY}:postgres16-ext-sha-${{ github.sha }}"

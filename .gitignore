@@ -1,1 +1,19 @@
-.idea
+# Secrets / credentials -- never commit
+.env
+.env.*
+*.pem
+*.key
+*_rsa
+*.crt
+*.p12
+
+# Build artifacts
+*.tar
+*.tar.gz
+*.log
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+.DS_Store

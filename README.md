@@ -7,8 +7,8 @@ These images are temporary solutions until we can use an official Nextcloud imag
 
 | Path                    | Image tag                                              | What it adds                                              |
 | ----------------------- | ------------------------------------------------------ | -------------------------------------------------------- |
-| `soap-client/`          | `docker.io/conduction/nextcloud-images:fpm-soap`       | Nextcloud `fpm` with the PHP `xsl` and `soap` extensions |
-| `postgres-extensions/`  | `docker.io/conduction/nextcloud-images:postgres16-ext` | Bitnami PostgreSQL 16 with `pgvector` built from source  |
+| `soap-client/`          | `docker.io/conduction2022/nextcloud-images:fpm-soap`       | Nextcloud `fpm` with the PHP `xsl` and `soap` extensions |
+| `postgres-extensions/`  | `docker.io/conduction2022/nextcloud-images:postgres16-ext` | Bitnami PostgreSQL 16 with `pgvector` built from source  |
 
 ## Building & publishing
 
@@ -20,6 +20,6 @@ requires the `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets.
 To build locally with Docker:
 
 ```bash
-docker build ./soap-client          -t docker.io/conduction/nextcloud-images:fpm-soap
-docker build ./postgres-extensions  -t docker.io/conduction/nextcloud-images:postgres16-ext
+docker build ./soap-client          -t docker.io/conduction2022/nextcloud-images:fpm-soap
+docker build ./postgres-extensions  -t docker.io/conduction2022/nextcloud-images:postgres16-ext
 ```

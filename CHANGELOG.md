@@ -7,7 +7,7 @@ All notable changes to this repository are documented here.
 ### Changed
 - **Registry migration off GitHub Container Registry (ghcr.io).** The GitHub
   org was flagged, so ghcr.io pushes are no longer possible. Image builds now
-  target **Docker Hub** (`docker.io/conduction/nextcloud-images`).
+  target **Docker Hub** (`docker.io/conduction2022/nextcloud-images`).
 - **CI moved to Forgejo Actions (Codeberg).** Added
   `.forgejo/workflows/build.yml`, which builds both images with `buildah`
   (`--storage-driver=vfs --isolation=chroot`) because Codeberg's hosted runners

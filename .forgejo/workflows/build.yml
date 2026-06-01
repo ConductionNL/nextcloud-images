@@ -27,7 +27,7 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: docker.io/conduction/nextcloud-images
+  REGISTRY: docker.io/conduction2022/nextcloud-images
 
 jobs:
   build-soap-client:

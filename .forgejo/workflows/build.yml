@@ -1,5 +1,11 @@
 name: Build nextcloud images
 
+# BACKUP PATH. The primary publisher is .github/workflows/build.yml, which
+# pushes to ghcr.io. This workflow exists for when GitHub Actions is
+# unavailable; it pushes to Docker Hub and is not expected to run in normal
+# operation. Keep its tag names identical to the GitHub workflow's, so a
+# failover does not change what a deployment resolves to.
+#
 # Builds the two purpose-built images and pushes them to Docker Hub.
 #
 # Why buildah (and not `docker build`)?
@@ -42,16 +48,22 @@ jobs:
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | buildah login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin docker.io
 
+      - name: Resolve Nextcloud version from the Dockerfile
+        id: version
+        run: echo "version=$(./soap-image-version.sh)" >> "$GITHUB_OUTPUT"
+
       - name: Build SOAP client image
         run: |
           buildah build \
             --storage-driver=vfs \
             --isolation=chroot \
+            --tag "${REGISTRY}:${{ steps.version.outputs.version }}-fpm-soap" \
             --tag "${REGISTRY}:fpm-soap" \
             ./soap-client
 
       - name: Push SOAP client image
         run: |
+          buildah push --storage-driver=vfs "${REGISTRY}:${{ steps.version.outputs.version }}-fpm-soap"
           buildah push --storage-driver=vfs "${REGISTRY}:fpm-soap"
 
   build-postgres-extensions:

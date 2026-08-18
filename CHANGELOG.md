@@ -2,6 +2,49 @@
 
 All notable changes to this repository are documented here.
 
+## 2026-08-18
+
+### Added
+- `soap-image-version.sh` — prints the Nextcloud patch version the soap-client
+  image is built on, read from the `FROM` line in `soap-client/Dockerfile`.
+  Exits non-zero when that base is not pinned to a full `major.minor.patch`
+  version, so a floating base cannot silently produce an unversioned image.
+  All three publishers read the version through this one script.
+- **Versioned tag for the soap-client image.** Every build now publishes
+  `<version>-fpm-soap` (immutable) alongside `fpm-soap` (moving). Deployments
+  pin the versioned tag; `fpm-soap` is kept only so existing references keep
+  resolving and can be dropped once nothing uses it.
+
+  Why: `fpm-soap` was the only tag, carried no version, and was overwritten on
+  every build. Combined with `imagePullPolicy: IfNotPresent` that made the
+  running Nextcloud version depend on when a node last pulled — not knowable
+  from Git. Measured 2026-08-18: seven deployments across `rijswijk-accept`,
+  `beek`, `sluis`, `bct` and `vaals` all ran 32.0.6, from two different builds
+  in two different registries, none of it stated anywhere.
+
+### Changed
+- **ghcr.io is the primary registry again.** `.github/workflows/build.yml`
+  publishes both images to `ghcr.io/conductionnl/nextcloud-images` and is the
+  supported path. The 2026-06-01 note below said ghcr.io pushes were no longer
+  possible because the GitHub org was flagged; that is no longer the case —
+  the org has been pushing to ghcr.io again since at least 2026-07-17.
+- `.forgejo/workflows/build.yml` is now documented as the **backup** path and
+  publishes the same tag names, so a failover does not change what a
+  deployment resolves to. Its registry stays Docker Hub (different
+  credentials); switching it to ghcr.io needs a token change and was not done.
+- `.github/workflows/build.yml`: `actions/checkout@v1` → `@v4`, and the
+  soap-client job gained the `packages: write` permission it was missing.
+- `build-and-push.sh`: defaults to ghcr.io, derives the registry host from
+  `REGISTRY` instead of hardcoding `docker.io`, and accepts
+  `REGISTRY_USERNAME` / `REGISTRY_TOKEN` (with `DOCKERHUB_*` still honoured as
+  fallbacks). It publishes both soap tags, like CI.
+
+### Not done
+- `postgres16-ext` still has no version tag — same class of problem, left
+  alone deliberately; this change is scoped to the soap-client image.
+- Nothing was rebuilt or pushed. The versioned tag does not exist in any
+  registry until the workflow runs.
+
 ## 2026-06-01
 
 ### Changed

@@ -1,0 +1,56 @@
+name: Quality Report
+
+# Reusable workflow called by code-quality.yml. Split into two files on purpose:
+# the org ruleset requires the status context `quality / Quality Report`, and
+# GitHub composes that name as `<caller job id> / <called job name>`. A plain
+# job in a single workflow cannot produce a context with a slash in it.
+#
+# WHY NOT THE SHARED FLEET PIPELINE: ConductionNL/.github's quality.yml is a
+# Nextcloud PHP-app pipeline — PHPUnit matrices, Playwright, Newman, psalm,
+# info.xml validation. This repo is two Dockerfiles and two shell scripts, with
+# no composer.json, package.json or appinfo/info.xml. Calling it with every leg
+# disabled produced a green report about nothing, and in this repo it did not
+# even start (run 32234870604, startup_failure, zero jobs, no log and no error
+# banner in the UI).
+#
+# So the gate checks what this repo actually contains. All three steps run
+# tools already present on the runner image or pulled as a container, so there
+# are no third-party actions to allowlist.
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: "Quality Report"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        run: shellcheck build-and-push.sh soap-image-version.sh
+
+      - name: Hadolint
+        # Run as a container rather than via hadolint/hadolint-action, so no
+        # third-party action needs to be allowed by org policy.
+        run: |
+          for dockerfile in soap-client/Dockerfile postgres-extensions/Dockerfile; do
+            echo "==> ${dockerfile}"
+            docker run --rm -i hadolint/hadolint:latest-alpine \
+              hadolint --failure-threshold error - < "${dockerfile}"
+          done
+
+      - name: Soap image base is pinned to a patch version
+        # The actual invariant this repo exists to hold: if the FROM line ever
+        # floats, soap-image-version.sh exits non-zero and there is no patch
+        # number to publish a tag under. Guarding it here means a PR that
+        # loosens the base is rejected before it can produce an unversioned
+        # image.
+        run: |
+          version="$(./soap-image-version.sh)"
+          echo "soap-client base: Nextcloud ${version}"

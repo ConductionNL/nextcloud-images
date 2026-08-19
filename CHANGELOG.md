@@ -39,6 +39,28 @@ All notable changes to this repository are documented here.
   `REGISTRY_USERNAME` / `REGISTRY_TOKEN` (with `DOCKERHUB_*` still honoured as
   fallbacks). It publishes both soap tags, like CI.
 
+### Added (CI)
+- **The two status contexts the org ruleset requires.** `Main Branch Protection`
+  requires `branch-protection / check-branch` and `quality / Quality Report`;
+  neither existed here, so a PR into main sat at BLOCKED with zero checks.
+  `.github/workflows/branch-protection.yml` is taken over from the fleet
+  unchanged. The quality context is produced by a repo-local reusable workflow
+  (`code-quality.yml` calling `quality-report.yml`) instead of the shared fleet
+  pipeline.
+
+  Why local: the shared `ConductionNL/.github` quality.yml is a Nextcloud
+  PHP-app pipeline. This repo has no composer.json, package.json or
+  appinfo/info.xml, so nearly every leg has no subject matter. Calling it with
+  every leg disabled produced a green report about nothing, and here it did not
+  start at all — run 32234870604, `startup_failure`, zero jobs, no log and no
+  error banner. The local gate runs shellcheck on both scripts, hadolint on both
+  Dockerfiles (`--failure-threshold error`), and asserts that
+  `soap-image-version.sh` still resolves a patch version, which is the invariant
+  this repo exists to hold.
+
+  Note that `hotfix/*` is required as the branch prefix: the shared
+  branch-protection check accepts only `beta -> main` or `hotfix/* -> main`.
+
 ### Not done
 - `postgres16-ext` still has no version tag — same class of problem, left
   alone deliberately; this change is scoped to the soap-client image.

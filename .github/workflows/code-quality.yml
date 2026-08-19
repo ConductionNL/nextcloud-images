@@ -1,0 +1,29 @@
+name: Code Quality
+
+# Produces the `quality / Quality Report` status context that the org-level
+# `Main Branch Protection` ruleset requires. The job id below is half of that
+# context name; the other half is the job name in the called workflow.
+#
+# The gate itself lives in .github/workflows/quality-report.yml — see the header
+# there for why this repo does not call the shared fleet pipeline.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  # Job id must stay `quality` so the check reports as
+  # `quality / Quality Report`, which is the context the org ruleset requires.
+  quality:
+    uses: ./.github/workflows/quality-report.yml

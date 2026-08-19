@@ -1,26 +1,60 @@
 name: Build nextcloud images
 
+# Builds the purpose-built images and publishes them to GitHub Container
+# Registry (ghcr.io). This is the primary publishing path.
+#
+# The Forgejo workflow in .forgejo/workflows/build.yml is a backup for when
+# GitHub Actions is unavailable; it targets Docker Hub and is not expected to
+# run in normal operation. Keep the tag names in the two in sync.
+#
+# The soap-client image is published under two tags:
+#   <version>-fpm-soap   immutable; names the Nextcloud patch release it contains
+#   fpm-soap             moving; kept only so existing references keep resolving
+#
+# Deployments pin the versioned tag. `fpm-soap` is a migration aid and can be
+# dropped once nothing references it any more. The version comes from the
+# `FROM` line in soap-client/Dockerfile via ./soap-image-version.sh, which
+# fails the build if that base is not pinned to a patch release.
+
 on:
   push:
     branches:
       - main
-  workflow_dispatch: 
+  workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io/conductionnl/nextcloud-images
 
 jobs:
   build-soap-client:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - uses: actions/checkout@v1
-      - name: Build docker image for folder SOAP Client
-        run: docker build ./soap-client -t ghcr.io/conductionnl/nextcloud-images:fpm-soap
-      - name: Login to Container Registry
-        id: containerregistry-login
+      - uses: actions/checkout@v4
+
+      - name: Resolve Nextcloud version from the Dockerfile
+        id: version
+        run: echo "version=$(./soap-image-version.sh)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Container Registry (GHCR)
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $(cut -d'/' -f1 <<< $GITHUB_REPOSITORY) --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build docker image for folder SOAP Client
+        run: |
+          docker build ./soap-client \
+            -t "${REGISTRY}:${{ steps.version.outputs.version }}-fpm-soap" \
+            -t "${REGISTRY}:fpm-soap"
+
       - name: Push to Container Registry
-        run: docker push ghcr.io/conductionnl/nextcloud-images:fpm-soap
-        
+        run: |
+          docker push "${REGISTRY}:${{ steps.version.outputs.version }}-fpm-soap"
+          docker push "${REGISTRY}:fpm-soap"
+
   build-postgres-extensions:
     runs-on: ubuntu-latest
     permissions:
@@ -30,17 +64,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Login to Container Registry (GHCR)
+      - name: Log in to Container Registry (GHCR)
         run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $(cut -d'/' -f1 <<< $GITHUB_REPOSITORY) --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build docker image (Postgres extensions)
         run: |
           docker build ./postgres-extensions \
-            -t ghcr.io/conductionnl/nextcloud-images:postgres16-ext \
-            -t ghcr.io/conductionnl/nextcloud-images:postgres16-ext-sha-${{ github.sha }}
+            -t "${REGISTRY}:postgres16-ext" \
+            -t "${REGISTRY}:postgres16-ext-sha-${{ github.sha }}"
 
       - name: Push to Container Registry
         run: |
-          docker push ghcr.io/conductionnl/nextcloud-images:postgres16-ext
-          docker push ghcr.io/conductionnl/nextcloud-images:postgres16-ext-sha-${{ github.sha }}
+          docker push "${REGISTRY}:postgres16-ext"
+          docker push "${REGISTRY}:postgres16-ext-sha-${{ github.sha }}"

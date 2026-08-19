@@ -1,0 +1,74 @@
+name: Code Quality
+
+# Produces the `quality / Quality Report` status check, which the org-level
+# `Main Branch Protection` ruleset requires on this repo. Without it a PR into
+# main sits at BLOCKED with zero checks.
+#
+# WHAT THIS REPO IS: two Dockerfiles and two shell scripts. No PHP, no
+# composer.json, no package.json, no appinfo/info.xml, no test suite. The
+# shared quality.yml is a Nextcloud PHP-app pipeline, so nearly every leg it
+# offers has no subject matter here. Those legs are switched OFF explicitly
+# rather than left at their defaults — a default-on leg with nothing to inspect
+# reports `success`, which is indistinguishable from a leg that actually
+# checked something.
+#
+# Defaults in the shared workflow that are ON and are turned off here:
+#   enable-php, enable-npm, enable-psalm, enable-phpstan, enable-phpmd,
+#   enable-phpcs, enable-phpmetrics, enable-frontend, enable-eslint,
+#   enable-stylelint, enable-license-check, enable-sbom,
+#   enable-features-extract
+#
+#   enable-reuse is off as well: the two shell scripts carry SPDX headers but
+#   the Dockerfiles and the YAML do not, so a REUSE run would go red on a
+#   licensing convention this repo has never adopted. Adopting it is a separate
+#   decision, not a side effect of needing a status check.
+#
+# The `security` job in the shared workflow has no enable flag and always runs;
+# with no composer.json and no package.json there is nothing for it to audit.
+#
+# NOT COVERED BY THIS FILE: shellcheck on the two scripts, hadolint on the two
+# Dockerfiles, and a build-only smoke test of the images. Those are the checks
+# this repo would actually benefit from, and the shared workflow does not offer
+# them. This file buys the required context; it is not a quality gate for a
+# container-build repo.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# Permission CEILING for the called pipeline. GitHub statically validates the
+# called workflow's declared job permissions against this grant — even for jobs
+# that are disabled — so it must cover the maximum any nested job declares.
+permissions:
+  contents: write
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  quality:
+    uses: ConductionNL/.github/.github/workflows/quality.yml@main
+    with:
+      app-name: nextcloud-images
+      enable-php: false
+      enable-npm: false
+      enable-psalm: false
+      enable-phpstan: false
+      enable-phpmd: false
+      enable-phpcs: false
+      enable-phpmetrics: false
+      enable-frontend: false
+      enable-eslint: false
+      enable-stylelint: false
+      enable-reuse: false
+      enable-license-check: false
+      enable-sbom: false
+      enable-features-extract: false

@@ -1,4 +1,4 @@
-FROM docker.io/library/nextcloud:32-fpm
+FROM docker.io/library/nextcloud:32.0.15-fpm
 
   RUN apt-get update && \
       apt-get install -y --no-install-recommends \
